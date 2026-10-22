@@ -1,0 +1,6 @@
+test_*.py
+prepare_dist.py
+bundle.py
+*.png
+__pycache__/
+.DS_Store
