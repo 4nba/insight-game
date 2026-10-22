@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "insight-game",
+  "compatibility_date": "2026-01-01",
+  "pages_build_output_dir": ".",
+  "kv_namespaces": [
+    {
+      "binding": "INSIGHT_KV",
+      "id": "INSIGHT_KV"
+    }
+  ]
+}
