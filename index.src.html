@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>«Инсайт» — Психотерапевтическая игра самопознания</title>
+  <link rel="stylesheet" href="tailwind.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      box-shadow: 0 16px 36px -26px rgba(15, 23, 42, 0.55);
+    }
+    .badge-icon {
+      font-size: 11px;
+      line-height: 1;
+    }
+    .panel-title {
+      letter-spacing: 0.02em;
+    }
+  </style>
+</head>
+<body class="bg-amber-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-amber-200 selection:text-slate-900">
+
+  <!-- TOP HEADER -->
+  <header class="glass-panel sticky top-0 z-40 border-b border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-md">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-amber-400/30 text-xl font-bold">
+        🪷
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-extrabold text-lg sm:text-xl tracking-tight bg-gradient-to-r from-amber-600 via-orange-500 to-amber-700 bg-clip-text text-transparent">
+            ИНСАЙТ
+          </h1>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-500/30 font-medium">
+            Панель ведущего
+          </span>
+          <span id="cloudStatusBadge" class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 flex items-center gap-1 font-mono">
+            <span>⚪</span> Локально
+          </span>
+        </div>
+        <p class="text-xs text-slate-500 hidden sm:block">
+          Психотерапевтическая трансформационная игра • Александра Свобода
+        </p>
+      </div>
+    </div>
+
+    <!-- HEADER CONTROLS -->
+    <div class="flex items-center flex-wrap gap-2">
+      <button id="btnManagePlayers" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 border border-slate-200 flex items-center gap-1.5 transition">
+        👥 Игроки (<span id="headerPlayerCount">1</span>)
+      </button>
+
+      <button id="btnPlayerDossier" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 border border-slate-200 flex items-center gap-1.5 transition">
+        📋 Карта игрока
+      </button>
+
+      <button id="btnDecksModal" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 border border-slate-200 flex items-center gap-1.5 transition">
+        🃏 Колоды и МАК
+      </button>
+
+      <button id="btnRulesModal" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 border border-slate-200 flex items-center gap-1.5 transition">
+        📖 Правила
+      </button>
+
+      <div class="h-6 w-px bg-slate-200 mx-1"></div>
+
+      <!-- PROMINENT SYNC / SHARE BUTTON -->
+      <button id="btnSyncModal" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-700 to-indigo-600 hover:from-indigo-600 hover:to-indigo-500 text-xs font-bold text-white shadow-md flex items-center gap-1.5 transition" title="Сохранить, сменить ПК или передать другому ведущему">
+        <span>☁️</span> Облако & Синхронизация
+      </button>
+
+      <button id="btnUndo" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 border border-slate-200 transition" title="Отменить последнее действие (Ctrl+Z)">
+        ↶
+      </button>
+
+      <button id="btnResetGame" class="px-2.5 py-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-xs text-rose-700 border border-rose-300 transition" title="Начать новую игру с нуля">
+        🔄
+      </button>
+    </div>
+  </header>
+
+  <section class="group-overview" aria-label="Обзор группы">
+    <div class="group-heading"><strong>Группа · <span id="groupCount">1</span> / 20</strong><span>Выберите участника, чтобы вести его ход</span></div>
+    <div id="groupRoster" class="group-roster"></div>
+  </section>
+
+  <!-- ACTIVE PLAYER QUICK BAR -->
+  <div class="bg-white border-b border-slate-200/80 px-4 py-2 flex flex-wrap items-center justify-between gap-3 text-sm">
+    <div class="flex items-center gap-3">
+      <span class="text-xs uppercase tracking-wider font-semibold text-slate-500">Активный ход:</span>
+      <div id="activePlayerBadge" class="flex items-center gap-2 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+        <span id="activePlayerDot" class="w-3.5 h-3.5 rounded-full bg-purple-500"></span>
+        <span id="activePlayerName" class="font-bold text-slate-800">Игрок 1</span>
+        <span id="activePlayerCellBadge" class="text-xs px-2 py-0.5 rounded-full bg-slate-200 text-amber-700 font-mono">Клетка 98</span>
+        <span id="playerStatusBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-300 font-semibold">🐣 Рождение</span>
+      </div>
+      <div id="activePlayerRequestSnippet" class="text-xs text-slate-500 italic max-w-md truncate hidden md:block">
+        «Запрос не указан»
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <span class="text-xs text-slate-500">Раунд: <b id="lblRound" class="text-slate-700 font-mono">1</b></span>
+      <button id="btnNextPlayer" class="px-3 py-1 bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm">
+        Следующий игрок ➔
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="flex-1 p-3 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 max-w-[1920px] mx-auto w-full">
+
+    <!-- LEFT: GAME BOARD (8 cols on lg) -->
+    <section id="boardSection" class="lg:col-span-8 flex flex-col gap-3">
+      
+      <!-- LEVEL COLOR LEGEND BAR -->
+      <div class="glass-panel p-2.5 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span class="font-semibold text-slate-600">Сферы поля:</span>
+        <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <span class="px-2 py-0.5 rounded bg-red-100 text-red-700 border border-red-300 font-medium">1. Тело (1-13)</span>
+          <span class="px-2 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-300 font-medium">2. Отношения / Деньги (14-39)</span>
+          <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-300 font-medium">3. Части Я / ЭГО (40-52)</span>
+          <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-300 font-medium">4. Чувства / Социум (53-78)</span>
+          <span class="px-2 py-0.5 rounded bg-cyan-100 text-cyan-700 border border-cyan-300 font-medium">5. Работа (79-91)</span>
+          <span class="px-2 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-300 font-medium">6. Мышление (92-104)</span>
+        </div>
+      </div>
+
+      <!-- BOARD GRID CONTAINER -->
+      <div class="overflow-x-auto pb-2 rounded-xl bg-white p-1 border border-slate-200">
+        <div id="boardGrid" class="board-grid min-w-[1020px]">
+          <!-- Cells will be generated here by JavaScript in exact snake order -->
+        </div>
+      </div>
+
+      <!-- BOARD FOOTER LEGEND -->
+      <div class="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 px-2">
+        <div class="flex items-center gap-3 flex-wrap">
+          <span>❤️ Ресурс</span>
+          <span>🪷 Лотос (центр уровня)</span>
+          <span>🃏 Взять карту</span>
+          <span>🧭 Карта-вектор</span>
+          <span>❌ Потеря ресурса</span>
+          <span>➔ Переход по стрелке</span>
+          <span>🛑 101 — выход</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnBoardFocus" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-[11px] font-semibold transition" title="Развернуть поле на весь экран (Esc — выйти)">
+            ⛶ Во весь экран
+          </button>
+          <span class="text-slate-500 italic">💡 Кликните на любую клетку для просмотра карты</span>
+        </div>
+      </div>
+
+      <!-- RECENT MOVES LOG -->
+      <div class="glass-panel p-3 rounded-xl">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+            <span>📜</span> Лента ходов и событий
+          </h3>
+          <span id="logCountBadge" class="text-[10px] text-slate-500">Последние 10 событий</span>
+        </div>
+        <div id="movesLogList" class="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-1 text-xs text-slate-600">
+          <div class="text-slate-500 italic">Игра начата. Ждем первого броска!</div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- RIGHT: FACILITATOR WORKSPACE & CURRENT CARD (4 cols on lg) -->
+    <aside class="lg:col-span-4 flex flex-col gap-4">
+
+      <!-- 1. TURN & DICE CONTROLLER -->
+      <div class="glass-panel p-4 rounded-xl border border-slate-200 flex flex-col gap-3 shadow-lg">
+        <div class="flex items-center justify-between">
+          <h2 class="font-extrabold text-sm uppercase tracking-wider text-amber-600 flex items-center gap-2">
+            <span>🎲</span> Управление ходом игрока
+          </h2>
+          <span id="turnStatusBadge" class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
+            Ходит: <b id="turnPlayerName" class="text-amber-700">Игрок 1</b>
+          </span>
+        </div>
+
+        <!-- Warning for Birth (if on 98) -->
+        <div id="birthAlertBox" class="p-2.5 rounded-lg bg-amber-100 border border-amber-300 text-xs text-amber-800 flex items-start gap-2">
+          <span class="text-base">🐣</span>
+          <div>
+            <b>Ожидание Рождения:</b> Игрок находится на клетке 98 «Инсайт». По правилам нужно кидать кубик, пока не выпадет <b>1</b> (переход на 1 «Рождение»).
+          </div>
+        </div>
+
+        <!-- 3 Visits Block Alert -->
+        <div id="blockAlertBox" class="hidden p-2.5 rounded-lg bg-rose-100 border border-rose-300 text-xs text-rose-800 flex items-start gap-2">
+          <span class="text-base">⚠️</span>
+          <div id="blockAlertText">
+            <b>БЛОК!</b> Игрок встал на клетку в 3-й раз!
+          </div>
+        </div>
+
+        <!-- Finish / Exit Alert -->
+        <div id="endAlertBox" class="hidden flex-col gap-2">
+          <div id="endAlertText"></div>
+          <div id="endAlertActions" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- Pending Arrow Alert -->
+        <div id="arrowAlertBox" class="hidden p-2.5 rounded-lg bg-sky-100 border border-sky-300 text-xs text-sky-100 flex flex-col gap-2">
+          <div id="arrowAlertText"></div>
+          <div id="arrowAlertActions" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- Dice buttons -->
+        <div>
+          <div class="flex items-center justify-between gap-2 mb-1.5">
+            <label class="block text-xs font-semibold text-slate-500">
+              Укажите выпавшее число на кубике:
+            </label>
+            <label class="flex items-center gap-1 text-[10px] text-slate-500 cursor-pointer select-none" title="Автоматически списывать ресурс на клетках с крестом">
+              <input type="checkbox" id="autoSymbolsToggle" class="accent-amber-500" checked>
+              символы
+            </label>
+          </div>
+          <div class="grid grid-cols-6 gap-1.5">
+            <button class="btn-dice py-2 rounded-lg bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-700 font-bold text-base transition border border-slate-200 shadow-sm" data-roll="1">1</button>
+            <button class="btn-dice py-2 rounded-lg bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-700 font-bold text-base transition border border-slate-200 shadow-sm" data-roll="2">2</button>
+            <button class="btn-dice py-2 rounded-lg bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-700 font-bold text-base transition border border-slate-200 shadow-sm" data-roll="3">3</button>
+            <button class="btn-dice py-2 rounded-lg bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-700 font-bold text-base transition border border-slate-200 shadow-sm" data-roll="4">4</button>
+            <button class="btn-dice py-2 rounded-lg bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-700 font-bold text-base transition border border-slate-200 shadow-sm" data-roll="5">5</button>
+            <button class="btn-dice py-2 rounded-lg bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-700 font-bold text-base transition border border-slate-200 shadow-sm" data-roll="6">6</button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <button id="btnRollRandom" class="flex-1 py-1.5 px-3 rounded-lg bg-indigo-500 hover:bg-indigo-500 text-xs font-bold text-white transition flex items-center justify-center gap-1.5 shadow">
+            <span>🎲</span> Случайный бросок
+          </button>
+          <div class="flex items-center gap-1 text-xs">
+            <span class="text-slate-500">Или клетка:</span>
+            <input type="number" id="inputManualCell" min="1" max="104" placeholder="№" class="w-14 px-2 py-1 rounded bg-white border border-slate-200 text-center font-mono text-xs text-amber-700">
+            <button id="btnManualJump" class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-xs border border-slate-200 font-semibold">➔</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. CURRENT / SELECTED CELL CARD VIEW -->
+      <div id="cardViewPanel" class="glass-panel p-4 rounded-xl border border-slate-200 flex flex-col gap-3 shadow-lg">
+        <div class="flex items-start justify-between gap-2 border-b border-slate-200 pb-2.5">
+          <div>
+            <div class="flex items-center gap-2">
+              <span id="cardCellNumber" class="text-lg font-black font-mono text-amber-600 bg-white px-2 py-0.5 rounded border border-amber-300">№ 1</span>
+              <span id="cardCellLevelBadge" class="text-xs px-2 py-0.5 rounded-full bg-red-950 text-red-700 border border-red-300 font-semibold">1 Уровень • Тело</span>
+            </div>
+            <h3 id="cardCellTitle" class="text-base font-bold text-slate-800 mt-1">Рождение</h3>
+            <p id="cardCardTitleAlt" class="text-xs text-slate-500 italic">Название в колоде: «Рождение»</p>
+          </div>
+          <div id="cardActionBadge" class="text-xl">
+            🌱
+          </div>
+        </div>
+
+        <div class="text-xs text-slate-600 leading-relaxed bg-white p-2.5 rounded-lg border border-slate-200/80">
+          <p id="cardDescription">Поздравляем, Ты и твой запрос родились! Сконцентрируйся на своем запросе и в Добрый путь ИНСАЙТА!</p>
+        </div>
+
+        <div>
+          <div class="text-xs font-bold text-amber-700 mb-1.5 flex items-center gap-1.5">
+            <span>❓</span> Вопросы ведущего игроку:
+          </div>
+          <ul id="cardQuestionsList" class="flex flex-col gap-1.5 text-xs text-slate-600 pl-3 border-l-2 border-amber-300">
+            <li>С каким чувством ты входишь в игру?</li>
+            <li>Готов ли ты довериться процессу самопознания?</li>
+          </ul>
+        </div>
+
+        <div id="cellActionButtons" class="pt-2 border-t border-slate-200 flex flex-col gap-2">
+        </div>
+
+        <button id="btnCopyCardForChat" class="w-full py-2 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 border border-slate-200 transition flex items-center justify-center gap-2 shadow-sm">
+          <span>💬</span> Скопировать карточку для Telegram чата
+        </button>
+      </div>
+
+      <!-- 3. ACTIVE PLAYER DOSSIER -->
+      <div class="glass-panel p-4 rounded-xl border border-slate-200 flex flex-col gap-3 shadow-lg">
+        <div class="flex items-center justify-between">
+          <h3 class="font-extrabold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+            <span>💎</span> Ресурсы игрока (<span id="dossierPlayerName" class="text-slate-700">Игрок 1</span>)
+          </h3>
+          <button id="btnGiveBase6" class="text-[11px] text-amber-600 hover:underline">
+            Выдать 6 базовых
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+          <!-- 1 Тело -->
+          <div id="resCard1" class="flex items-center justify-between p-1.5 rounded-lg bg-red-100 border border-red-300">
+            <span class="flex items-center gap-1 text-red-700 font-medium">🔴 Тело</span>
+            <div class="flex items-center gap-1">
+              <button class="btn-res-change w-5 h-5 rounded bg-slate-200 hover:bg-red-500 text-slate-700 hover:text-white font-bold" data-level="1" data-delta="-1">-</button>
+              <span id="resVal1" class="font-mono font-bold w-4 text-center">1</span>
+              <button class="btn-res-change w-5 h-5 rounded bg-slate-200 hover:bg-red-500 text-slate-700 hover:text-white font-bold" data-level="1" data-delta="1">+</button>
+            </div>
+          </div>
+
+          <!-- 2 Отношения/Деньги -->
+          <div id="resCard2" class="flex items-center justify-between p-1.5 rounded-lg bg-orange-100 border border-orange-300">
+            <span class="flex items-center gap-1 text-orange-700 font-medium">🟠 Деньги</span>
+            <div class="flex items-center gap-1">
+              <button class="btn-res-change w-5 h-5 rounded bg-slate-200 hover:bg-orange-500 text-slate-700 hover:text-white font-bold" data-level="2" data-delta="-1">-</button>
+              <span id="resVal2" class="font-mono font-bold w-4 text-center">1</span>
+              <button class="btn-res-change w-5 h-5 rounded bg-slate-200 hover:bg-orange-500 text-slate-700 hover:text-white font-bold" data-level="2" data-delta="1">+</button>
+            </div>
+          </div>
+
+          <!-- 3 Части Я -->
+          <div id="resCard3" class="flex items-center justify-between p-1.5 rounded-lg bg-amber-100 border border-amber-900/60">
+            <span class="flex items-center gap-1 text-amber-700 font-medium">🟡 ЭГО / Я</span>
+            <div class="flex items-center gap-1">
+              <button class="btn-res-change w-5 h-5 rounded bg-slate-200 hover:bg-amber-500 text-slate-700 hover:text-white font-bold" data-level="3" data-delta="-1">-</button>
+              <span id="resVal3" class="font-mono font-bold w-4 text-center">1</span>
+              <button class="btn-res-change w-5 h-5 rounded bg-slate-200 hover:bg-amber-500 text-slate-700 hover:text-white font-bold" data-level="3" data-delta="1">+</button>
+            </div>
+          </div>
+
+          <!-- 4 Чувства -->
+          <div id="resCard4" class="flex items-center justify-between p-1.5 rounded-lg bg-emerald-100 border border-emerald-300">
+            <span class="flex items-center gap-1 text-emerald-700 font-medium">🟢 Чувства</span>
+            <div class="flex items-center gap-1">
+              <button class="btn-res-change w-5 h-5 rounded bg-slate-200 hover:bg-emerald-500 text-slate-700 hover:text-white font-bold" data-level="4" data-delta="-1">-</button>
+              <span id="resVal4" class="font-mono font-bold w-4 text-center">1</span>
+              <button class="btn-res-change w-5 h-5 rounded bg-slate-200 hover:bg-emerald-500 text-slate-700 hover:text-white font-bold" data-level="4" data-delta="1">+</button>
+            </div>
+          </div>
+
+          <!-- 5 Работа -->
+          <div id="resCard5" class="flex items-center justify-between p-1.5 rounded-lg bg-cyan-100 border border-cyan-900/60">
+            <span class="flex items-center gap-1 text-cyan-700 font-medium">🔵 Работа</span>
+            <div class="flex items-center gap-1">
+              <button class="btn-res-change w-5 h-5 rounded bg-slate-200 hover:bg-cyan-500 text-slate-700 hover:text-white font-bold" data-level="5" data-delta="-1">-</button>
+              <span id="resVal5" class="font-mono font-bold w-4 text-center">1</span>
+              <button class="btn-res-change w-5 h-5 rounded bg-slate-200 hover:bg-cyan-500 text-slate-700 hover:text-white font-bold" data-level="5" data-delta="1">+</button>
+            </div>
+          </div>
+
+          <!-- 6 Мышление -->
+          <div id="resCard6" class="flex items-center justify-between p-1.5 rounded-lg bg-blue-100 border border-blue-300">
+            <span class="flex items-center gap-1 text-blue-700 font-medium">🔷 Мышление</span>
+            <div class="flex items-center gap-1">
+              <button class="btn-res-change w-5 h-5 rounded bg-slate-200 hover:bg-blue-500 text-slate-700 hover:text-white font-bold" data-level="6" data-delta="-1">-</button>
+              <span id="resVal6" class="font-mono font-bold w-4 text-center">1</span>
+              <button class="btn-res-change w-5 h-5 rounded bg-slate-200 hover:bg-blue-500 text-slate-700 hover:text-white font-bold" data-level="6" data-delta="1">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2 pt-2 border-t border-slate-200">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-500 mb-1">
+              🎯 Запрос на игру:
+            </label>
+            <input type="text" id="inputPlayerRequest" class="w-full px-2.5 py-1.5 rounded bg-white border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-amber-500" placeholder="Что мне мешает прийти к желаемому?">
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-500 mb-1">
+              💡 Инсайты и осознания игрока:
+            </label>
+            <textarea id="textareaPlayerInsights" rows="2" class="w-full px-2.5 py-1.5 rounded bg-white border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-amber-500 resize-none" placeholder="Записывайте ключевые инсайты..."></textarea>
+          </div>
+        </div>
+
+        <button id="btnCopyFullTelegramReport" class="w-full py-2 px-3 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-xs font-bold text-white transition flex items-center justify-center gap-2 shadow">
+          <span>📋</span> Скопировать полный отчет игрока для Telegram
+        </button>
+      </div>
+
+    </aside>
+  </main>
+
+  <!-- MODAL: SYNC & CLOUD ROOM -->
+  <div id="modalSync" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl border border-slate-200 shadow-2xl flex flex-col gap-4 text-xs text-slate-600">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <h2 class="text-base font-bold text-amber-700 flex items-center gap-2">
+          <span>☁️</span> Облачная комната и синхронизация ведущих
+        </h2>
+        <button class="modal-close text-slate-500 hover:text-white text-lg font-bold">&times;</button>
+      </div>
+
+      <!-- SECTION 1: CLOUD ROOM REALTIME -->
+      <div class="p-4 rounded-xl bg-gradient-to-br from-indigo-100 to-white border border-indigo-300 flex flex-col gap-3 shadow-lg">
+        <div class="flex items-center justify-between">
+          <span class="font-extrabold text-sm text-indigo-700 flex items-center gap-1.5">
+            <span>⚡</span> Realtime Облако (Cloudflare KV)
+          </span>
+          <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-300 font-bold">
+            100% Бесплатно навсегда
+          </span>
+        </div>
+        <p class="text-[11px] text-slate-600 leading-relaxed">
+          Любые ведущие с любых компьютеров и телефонов подключаются к одной комнате. При каждом ходе данные в реальном времени сохраняются в облаке и обновляются на всех экранах!
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-2 pt-1">
+          <input type="text" id="inputCloudRoomName" placeholder="Имя комнаты (например, potok-1)..." class="flex-1 px-3 py-2 rounded-lg bg-amber-50 border border-indigo-300 text-xs text-slate-800 font-mono focus:outline-none focus:border-amber-400">
+          <button id="btnConnectCloudRoom" class="px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-xs transition shadow flex items-center justify-center gap-1.5">
+            <span>🔗</span> Подключить комнату
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 pt-1">
+          <button id="btnCopyCloudShareUrl" class="py-1.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-[11px] font-semibold transition flex items-center gap-1">
+            <span>📋</span> Скопировать ссылку на комнату
+          </button>
+          <button id="btnDisconnectCloud" class="py-1.5 px-3 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-700 border border-rose-800/60 text-[11px] font-semibold transition">
+            Отключить облако
+          </button>
+        </div>
+      </div>
+
+      <!-- SECTION 2: INSTANT LINK -->
+      <div class="p-3.5 rounded-xl bg-white border border-slate-200 flex flex-col gap-2">
+        <span class="font-bold text-slate-700 flex items-center gap-1.5 text-xs">
+          <span>🔗</span> Ссылка-снимок сессии (Работает оффлайн и без настройки)
+        </span>
+        <p class="text-[11px] text-slate-500 leading-snug">
+          Сохраняет текущую позицию всех игроков в виде длинной ссылки. Отправьте ссылку коллеге в Telegram — он продолжит игру с этого момента.
+        </p>
+        <button id="btnCopySessionUrl" class="mt-1 py-1.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-200 transition flex items-center justify-center gap-2">
+          <span>📋</span> Скопировать ссылку сессии
+        </button>
+      </div>
+
+      <!-- SECTION 3: JSON BACKUP -->
+      <div class="p-3.5 rounded-xl bg-white border border-slate-200 flex flex-col gap-2">
+        <span class="font-bold text-slate-700 flex items-center gap-1.5 text-xs">
+          <span>💾</span> Файл сессии (.json) для долгосрочного архива
+        </span>
+        <div class="grid grid-cols-2 gap-2 mt-1">
+          <button id="btnDownloadSessionJson" class="py-1.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-200 transition flex items-center justify-center gap-1.5">
+            <span>⬇️</span> Скачать .json
+          </button>
+          <button id="btnLoadSessionFile" class="py-1.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-200 transition flex items-center justify-center gap-1.5">
+            <span>⬆️</span> Загрузить .json
+          </button>
+          <input type="file" id="inputSessionFile" accept=".json" class="hidden">
+        </div>
+      </div>
+
+      <!-- SECTION 4: CODE INPUT -->
+      <div class="p-3.5 rounded-xl bg-white border border-slate-200 flex flex-col gap-2">
+        <span class="font-bold text-slate-700 flex items-center gap-1.5 text-xs">
+          <span>🔤</span> Восстановить из кода сессии
+        </span>
+        <div class="flex gap-2">
+          <input type="text" id="inputSessionCode" placeholder="Вставьте код сессии..." class="flex-1 px-3 py-1.5 rounded-lg bg-amber-50 border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-amber-500">
+          <button id="btnApplySessionCode" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold transition">
+            Загрузить
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PLAYERS MANAGEMENT -->
+  <div id="modalPlayers" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-lg p-5 rounded-2xl border border-slate-200 shadow-2xl flex flex-col gap-4">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <span>👥</span> Управление участниками игры
+        </h2>
+        <button class="modal-close text-slate-500 hover:text-white text-lg font-bold">&times;</button>
+      </div>
+
+      <div id="playersListContainer" class="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1">
+      </div>
+
+      <div class="pt-2 border-t border-slate-200 flex items-center gap-2">
+        <input type="text" id="inputNewPlayerName" placeholder="Имя нового игрока..." class="flex-1 px-3 py-2 rounded-lg bg-white border border-slate-200 text-xs text-slate-800 focus:border-amber-500 focus:outline-none">
+        <button id="btnAddPlayerSubmit" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition">
+          + Добавить
+        </button>
+      </div>
+      <details class="group-bulk">
+        <summary>Добавить список участников (до 20 в группе)</summary>
+        <label for="inputGroupNames">Каждое имя с новой строки</label>
+        <textarea id="inputGroupNames" rows="4" placeholder="Анна&#10;Борис&#10;Вера"></textarea>
+        <button id="btnAddGroup" type="button">Добавить список</button>
+      </details>
+    </div>
+  </div>
+
+  <!-- MODAL: PLAYER DOSSIER / PRINTABLE SHEET -->
+  <div id="modalDossier" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl border border-slate-200 shadow-2xl flex flex-col gap-4">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3 no-print">
+        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <span>📋</span> Карта игрока: <span id="modalDossierPlayerName" class="text-amber-600">Имя</span>
+        </h2>
+        <div class="flex items-center gap-2">
+          <button id="btnPrintDossier" class="px-3 py-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-xs font-bold text-white transition">
+            🖨️ Печать / PDF
+          </button>
+          <button class="modal-close text-slate-500 hover:text-white text-lg font-bold">&times;</button>
+        </div>
+      </div>
+
+      <div id="dossierPrintArea" class="bg-white text-slate-900 p-6 rounded-xl shadow font-sans text-xs flex flex-col gap-4">
+        <div class="border-b-2 border-slate-200 pb-3 flex justify-between items-center">
+          <div>
+            <h1 class="text-lg font-black tracking-tight text-slate-900">КАРТА ИГРОКА • ИГРА «ИНСАЙТ»</h1>
+            <p class="text-[11px] text-slate-600">Автор-составитель: Александра Свобода</p>
+          </div>
+          <div class="text-right">
+            <span class="font-bold text-sm" id="printPlayerName">Анна</span>
+            <p class="text-[10px] text-slate-500" id="printPlayerStatus">🎲 В игре</p>
+            <p class="text-[10px] text-slate-500" id="printBirthDate">Дата рождения: —</p>
+            <p class="text-[10px] text-slate-500" id="printDate">2026-10-22</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-2">
+          <div>
+            <p class="font-bold text-slate-700">Где у тебя сейчас есть проблема?</p>
+            <div id="printPlayerProblem" class="p-2 bg-slate-100 rounded border border-slate-300 mt-1 italic">—</div>
+          </div>
+          <div>
+            <p class="font-bold text-slate-700">А что ты хочешь, чтобы было в этой сфере?</p>
+            <div id="printPlayerDesired" class="p-2 bg-slate-100 rounded border border-slate-300 mt-1 italic">—</div>
+          </div>
+        </div>
+
+        <div>
+          <p class="font-bold text-slate-700">Запрос на игру (Что мне мешает прийти к желаемому?):</p>
+          <div id="printPlayerRequest" class="p-2 bg-slate-100 rounded border border-slate-300 mt-1 italic">
+            —
+          </div>
+        </div>
+
+        <table class="w-full border-collapse border border-slate-300 text-left text-[11px]">
+          <thead>
+            <tr class="bg-slate-200">
+              <th class="border border-slate-300 p-1.5 w-1/4">Сфера / Уровень</th>
+              <th class="border border-slate-300 p-1.5 w-1/6">Ресурсы<br><span class="font-normal text-[9px]">база + заработано</span></th>
+              <th class="border border-slate-300 p-1.5 w-1/3">Блоки</th>
+              <th class="border border-slate-300 p-1.5">Страхи, убеждения, вторичные выгоды</th>
+            </tr>
+          </thead>
+          <tbody id="printTableBody">
+          </tbody>
+        </table>
+
+        <div>
+          <p class="font-bold text-slate-700">Инсайты и главные осознания:</p>
+          <div id="printPlayerInsights" class="p-2.5 bg-amber-50 rounded border border-amber-300 min-h-[50px] mt-1 text-slate-800 whitespace-pre-wrap">
+            —
+          </div>
+        </div>
+
+        <div>
+          <p class="font-bold text-slate-700">Траектория движения по полю:</p>
+          <p id="printPlayerTrajectory" class="text-[11px] font-mono text-slate-600 break-words mt-0.5">
+            98 ➔ 1 ...
+          </p>
+        </div>
+      </div>
+
+      <div class="no-print flex flex-col gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <label class="text-[11px] text-slate-500 font-semibold">
+            Дата рождения
+            <input type="text" id="inputDossierBirthDate" placeholder="дд.мм.гггг" class="mt-1 w-full px-2.5 py-1.5 rounded bg-white border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-amber-500">
+          </label>
+          <label class="text-[11px] text-slate-500 font-semibold">
+            Запрос на игру
+            <input type="text" id="inputDossierRequest" class="mt-1 w-full px-2.5 py-1.5 rounded bg-white border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-amber-500">
+          </label>
+          <label class="text-[11px] text-slate-500 font-semibold">
+            Где сейчас проблема
+            <textarea id="inputDossierProblem" rows="2" class="mt-1 w-full px-2.5 py-1.5 rounded bg-white border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-amber-500 resize-y"></textarea>
+          </label>
+          <label class="text-[11px] text-slate-500 font-semibold">
+            Что хочу вместо этого
+            <textarea id="inputDossierDesired" rows="2" class="mt-1 w-full px-2.5 py-1.5 rounded bg-white border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-amber-500 resize-y"></textarea>
+          </label>
+        </div>
+
+        <div>
+          <p class="text-[11px] font-bold text-slate-600 mb-1.5">Заметки по уровням (блоки и страхи/убеждения)</p>
+          <div id="levelNotesEditor" class="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: DECKS & MAK -->
+  <div id="modalDecks" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-xl p-5 rounded-2xl border border-slate-200 shadow-2xl flex flex-col gap-4">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <span>🃏</span> Колоды карт и МАК (Метафорические ассоциативные карты)
+        </h2>
+        <button class="modal-close text-slate-500 hover:text-white text-lg font-bold">&times;</button>
+      </div>
+
+      <div id="deckTabs" class="flex flex-wrap gap-2 text-xs">
+      </div>
+
+      <div class="deck-card-view p-4 rounded-xl border flex flex-col gap-3 min-h-[150px] justify-center items-center text-center">
+        <span id="deckSelectedCardTitle" class="text-base font-bold text-amber-700">Назовите номер — покажу карту</span>
+        <p id="deckSelectedCardText" class="text-xs text-slate-600 max-w-md leading-relaxed italic">
+          Игрок называет номер, ведущий нажимает на цифру и открывает карту. Можно взять и случайную.
+        </p>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[11px] font-semibold text-slate-600">Игрок называет номер:</span>
+          <button id="btnToggleDeckList" class="text-[11px] text-amber-700 hover:underline">Показать весь список</button>
+        </div>
+        <div id="deckNumberPicker" class="number-picker grid grid-cols-8 sm:grid-cols-10 gap-1"></div>
+        <div id="deckFullList" class="hidden max-h-40 overflow-y-auto rounded-lg border bg-white/70 p-2 text-[11px] text-slate-600"></div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 pt-1">
+        <button id="btnShowCardByNumber" class="flex-1 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-xs font-bold text-white transition flex items-center justify-center gap-1.5 shadow">
+          <span>🔢</span> Показать карту по номеру
+        </button>
+        <button id="btnDrawRandomFromDeck" class="flex-1 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-xs font-bold text-white transition flex items-center justify-center gap-1.5 shadow">
+          <span>🎲</span> Случайная карта
+        </button>
+        <button id="btnSaveCardToInsights" class="py-2 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 border border-slate-300 transition">
+          + В инсайты игрока
+        </button>
+      </div>
+      <p class="text-[10px] text-slate-500 leading-snug">
+        Названия карт и их номера взяты из методических материалов игры. Текст-подсказка под картой — формулировка приложения для ведущего, а не дословная авторская инструкция.
+      </p>
+    </div>
+  </div>
+
+  <!-- MODAL: RULES HANDBOOK -->
+  <div id="modalRules" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 rounded-2xl border border-slate-200 shadow-2xl flex flex-col gap-4 text-xs text-slate-600 leading-relaxed">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <h2 class="text-base font-bold text-amber-700 flex items-center gap-2">
+          <span>📖</span> Методическое руководство ведущего игры «Инсайт»
+        </h2>
+        <button class="modal-close text-slate-500 hover:text-white text-lg font-bold">&times;</button>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <h3 class="font-bold text-sm text-slate-800">1. Подготовка и формулировка запроса</h3>
+        <p>Игроки формулируют запрос, начиная с фразы: <i>«Что мне мешает на пути к... (деньги, отношения, самореализация)?»</i>. Базовые запросы: <i>«Какие мои основные внутренние блоки?»</i>, <i>«Что именно меня тормозит?»</i>.</p>
+
+        <h3 class="font-bold text-sm text-slate-800">2. Начало игры</h3>
+        <ul class="list-disc pl-5 flex flex-col gap-1">
+          <li>Все участники ставят свои фишки на клетку <b>98 «Инсайт»</b>.</li>
+          <li>Ведущий выдает каждому игроку <b>6 базовых ресурсов</b> (по 1 ресурсу с каждого из 6 уровней).</li>
+          <li>Участники кидают кубик, пока не выпадет <b>1</b>. При выпадении единицы игрок перемещается на клетку <b>1 «Рождение»</b>.</li>
+          <li>Первым ходит тот, кто родился раньше. Приложение ведёт очередь рождения автоматически.</li>
+        </ul>
+
+        <h3 class="font-bold text-sm text-slate-800">3. Правило трех посещений (Блок)</h3>
+        <p class="p-2 rounded bg-rose-100 border border-rose-800/60 text-rose-800 font-semibold">
+          Если на одну и ту же клетку игрок встает трижды — это БЛОК! Это означает глубинную психологическую фиксацию, требующую отдельной проработки в запросе.
+        </p>
+
+        <h3 class="font-bold text-sm text-slate-800">4. Условные обозначения на поле</h3>
+        <ul class="list-disc pl-5 flex flex-col gap-1">
+          <li><b>«Сердце» ❤️:</b> ресурс. Игрок называет номер из списка ресурсов своего уровня — ведущий показывает слово и добавляет ресурс.</li>
+          <li><b>«Возьми карту» 🃏:</b> карта из колоды, совпадающей по названию с клеткой. Игрок называет номер карты, ведущий открывает её по номеру.</li>
+          <li><b>«Крест» ❌:</b> потеря ресурса того уровня, на котором стоит игрок. <b>Базовые ресурсы отдаются в последнюю очередь</b> — приложение учитывает это автоматически.</li>
+          <li><b>«Карта-вектор» 🧭:</b> возьмите карту-вектор 4 уровня и следуйте инструкции на карте.</li>
+          <li><b>Стрелка ⬆️⬇️ с числом:</b> обязательный переход на указанную клетку. Сначала перейдите, затем бросайте кубик.</li>
+          <li><b>Клетка 101 «Одержимость» 🛑:</b> выход из игры. Запрос на данном этапе заблокирован сверхконтролем.</li>
+          <li><b>Клетка 98 «Инсайт» 🪷:</b> финиш и разрешение запроса. Если игрок проходит мимо (выпало больше, чем нужно), он попадает в клетки 99–104 — «ловушки ума»; с 104 стрелка возвращает на 43.</li>
+        </ul>
+
+        <h3 class="font-bold text-sm text-slate-800">5. Ресурсы и отмена</h3>
+        <ul class="list-disc pl-5 flex flex-col gap-1">
+          <li>Ресурс состоит из <b>базового</b> (выдан в начале) и <b>заработанного</b>. При потере сначала списывается заработанный, затем базовый.</li>
+          <li>Кнопка <b>↶</b> или <b>Ctrl+Z</b> отменяет последнее действие ведущего — ошибочный бросок, списание или переход.</li>
+          <li>Автоматическое применение символов клеток можно отключить галочкой «символы» в панели хода.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: GENERIC NOTICE (vector cards, physical decks) -->
+  <div id="modalNotice" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 rounded-2xl border border-slate-200 shadow-2xl flex flex-col gap-3 text-xs text-slate-600">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <h2 id="noticeTitle" class="text-base font-bold text-amber-700">Заголовок</h2>
+        <button class="modal-close text-slate-500 hover:text-white text-lg font-bold">&times;</button>
+      </div>
+      <div id="noticeBody" class="flex flex-col gap-2 leading-relaxed"></div>
+      <div id="noticeActions" class="flex flex-wrap justify-end gap-2 pt-1"></div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toastNotification" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-white border border-amber-500/50 text-slate-800 px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 text-xs font-semibold">
+    <span id="toastIcon">✨</span>
+    <span id="toastMessage">Сообщение скопировано!</span>
+  </div>
+
+  
+<script type="module" src="ui.js"></script>
+
+</body>
+</html>

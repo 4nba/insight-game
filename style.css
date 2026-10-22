@@ -1,4 +1,4 @@
-/* Insight Game Styling */
+/* Insight Game — светлая «игровая» тема */
 :root {
   --level-1-red: #ef4444;
   --level-2-orange: #f97316;
@@ -7,12 +7,18 @@
   --level-5-cyan: #06b6d4;
   --level-6-blue: #3b82f6;
   --gold-accent: #f59e0b;
+  --ink: #1f2937;
 }
 
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background-color: #0f172a;
-  color: #f1f5f9;
+  background-color: #fffaf3;
+  background-image:
+    radial-gradient(1200px 600px at 8% -10%, #ffe4c4 0%, rgba(255, 228, 196, 0) 60%),
+    radial-gradient(1000px 520px at 100% 0%, #dbeafe 0%, rgba(219, 234, 254, 0) 55%),
+    radial-gradient(900px 700px at 50% 110%, #dcfce7 0%, rgba(220, 252, 231, 0) 60%);
+  background-attachment: fixed;
+  color: var(--ink);
   margin: 0;
   padding: 0;
   overflow-x: hidden;
@@ -20,18 +26,19 @@ body {
 
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
 }
 ::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: #f1f5f9;
+  border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #475569;
-  border-radius: 4px;
+  background: #cbd5e1;
+  border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #94a3b8;
 }
 
 /* Board Grid Layout (8 rows x 13 columns) */
@@ -39,84 +46,151 @@ body {
   display: grid;
   grid-template-columns: repeat(13, minmax(76px, 1fr));
   grid-template-rows: repeat(8, minmax(68px, 1fr));
-  gap: 4px;
-  background: #1e293b;
-  padding: 6px;
-  border-radius: 12px;
-  border: 1px solid #334155;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  gap: 6px;
+  background: #ffffff;
+  padding: 8px;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 18px 40px -22px rgba(15, 23, 42, 0.45);
   user-select: none;
 }
 
 /* Cell Appearance */
 .game-cell {
   position: relative;
-  border-radius: 6px;
-  padding: 4px 6px;
+  border-radius: 12px;
+  padding: 6px 7px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s ease;
   cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  min-height: 64px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  min-height: 66px;
   overflow: hidden;
+  box-shadow: 0 2px 6px -2px rgba(15, 23, 42, 0.18);
 }
 
 .game-cell:hover {
-  transform: translateY(-2px) scale(1.02);
+  transform: translateY(-3px) scale(1.03);
   z-index: 20;
-  box-shadow: 0 8px 16px -2px rgba(0, 0, 0, 0.6);
-  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 14px 26px -10px rgba(15, 23, 42, 0.45);
+  border-color: rgba(15, 23, 42, 0.18);
 }
 
 .game-cell.selected {
-  outline: 3px solid #fbbf24;
+  outline: 3px solid #f59e0b;
   outline-offset: 1px;
   z-index: 25;
-  box-shadow: 0 0 15px rgba(251, 191, 36, 0.7);
+  box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.22);
 }
 
-/* Level Color Themes */
+.cell-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  min-height: 2.1em;
+  color: #1f2937;
+}
+
+/* Level Color Themes — пастельные */
 .cell-level-1 {
-  background: linear-gradient(135deg, rgba(185, 28, 28, 0.7), rgba(153, 27, 27, 0.9));
-  border-color: rgba(239, 68, 68, 0.3);
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  border-color: #fca5a5;
 }
 .cell-level-2 {
-  background: linear-gradient(135deg, rgba(194, 65, 12, 0.7), rgba(154, 52, 18, 0.9));
-  border-color: rgba(249, 115, 22, 0.3);
+  background: linear-gradient(135deg, #ffedd5, #fed7aa);
+  border-color: #fdba74;
 }
 .cell-level-3 {
-  background: linear-gradient(135deg, rgba(161, 98, 7, 0.7), rgba(133, 77, 14, 0.9));
-  border-color: rgba(234, 179, 8, 0.3);
+  background: linear-gradient(135deg, #fef9c3, #fde68a);
+  border-color: #fcd34d;
 }
 .cell-level-4 {
-  background: linear-gradient(135deg, rgba(4, 120, 87, 0.7), rgba(6, 95, 70, 0.9));
-  border-color: rgba(16, 185, 129, 0.3);
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  border-color: #6ee7b7;
 }
 .cell-level-5 {
-  background: linear-gradient(135deg, rgba(14, 116, 144, 0.7), rgba(21, 94, 117, 0.9));
-  border-color: rgba(6, 182, 212, 0.3);
+  background: linear-gradient(135deg, #cffafe, #a5f3fc);
+  border-color: #67e8f9;
 }
 .cell-level-6 {
-  background: linear-gradient(135deg, rgba(29, 78, 216, 0.7), rgba(30, 64, 175, 0.9));
-  border-color: rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  border-color: #93c5fd;
 }
 
 /* Lotus / Central cells */
 .cell-lotus {
-  border: 1px solid rgba(251, 191, 36, 0.6) !important;
-  box-shadow: inset 0 0 10px rgba(251, 191, 36, 0.25);
+  border: 2px solid #f59e0b !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18), 0 4px 10px -4px rgba(180, 83, 9, 0.4);
 }
 
 /* Cell 98 Insight Highlight */
 .cell-insight {
-  background: radial-gradient(circle at center, #1e3a8a, #0f172a) !important;
-  border: 2px solid #fbbf24 !important;
-  box-shadow: 0 0 20px rgba(251, 191, 36, 0.4), inset 0 0 12px rgba(251, 191, 36, 0.3);
+  background: radial-gradient(circle at center, #fef3c7, #fde68a) !important;
+  border: 2px solid #f59e0b !important;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2), 0 8px 18px -6px rgba(180, 83, 9, 0.45);
+}
+
+/* Marks: потеря / переход */
+.cell-loss {
+  box-shadow: inset 3px 0 0 rgba(220, 38, 38, 0.65);
+}
+
+.cell-arrow {
+  box-shadow: inset 3px 0 0 rgba(217, 119, 6, 0.7);
+}
+
+.cell-loss.cell-arrow {
+  box-shadow: inset 3px 0 0 rgba(220, 38, 38, 0.65), inset 6px 0 0 rgba(217, 119, 6, 0.7);
+}
+
+/* Fullscreen facilitator board */
+#boardSection.focus-mode {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow: auto;
+  background: #fffaf3;
+  padding: 14px;
+}
+
+#boardSection.focus-mode .board-grid {
+  min-width: 1180px;
+}
+
+#boardSection.focus-mode .game-cell {
+  min-height: 86px;
+}
+
+body.focus-open {
+  overflow: hidden;
 }
 
 /* Player Chip Badge */
+.group-overview { padding: 10px 16px; background: #fffdf8; border-bottom: 1px solid #e2e8f0; }
+.group-heading { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; margin-bottom: 8px; }
+.group-heading > span { color: #64748b; }
+.group-roster { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 6px; max-height: 220px; overflow-y: auto; padding: 3px; }
+.group-player { display: flex; gap: 8px; align-items: center; text-align: left; padding: 8px; border: 1px solid #cbd5e1; border-radius: 10px; background: white; min-width: 0; cursor: pointer; }
+.group-player[aria-pressed="true"] { border-color: #d97706; background: #fffbeb; box-shadow: 0 0 0 2px #fcd34d; }
+.group-player-info { min-width: 0; }
+.group-player-info strong { display: block; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.group-player-info small { display: block; font-size: 10px; color: #475569; }
+#playersListContainer > div { flex-wrap: wrap; }
+.group-number { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; color: white; font-weight: bold; font-size: 12px; text-shadow: 0 1px 2px #000; }
+.group-bulk { font-size: 12px; }
+.group-bulk summary { cursor: pointer; font-weight: 600; }
+.group-bulk label { display: block; margin-top: 8px; }
+.group-bulk textarea { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; }
+.group-bulk button { padding: 8px 12px; background: #fcd34d; border-radius: 8px; margin-top: 6px; }
+.players-tokens-container { max-height: 70px; overflow-y: auto; padding: 2px; }
+.player-token { flex-shrink: 0; text-shadow: 0 1px 2px #000; }
+.player-token:focus-visible, .group-player:focus-visible { outline: 3px solid #4338ca; outline-offset: 2px; }
+
 .player-token {
   width: 22px;
   height: 22px;
@@ -128,8 +202,7 @@ body {
   font-weight: 800;
   color: white;
   border: 2px solid white;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.6);
-  animation: pulse-subtle 2s infinite ease-in-out;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.35);
   cursor: pointer;
   position: relative;
   z-index: 10;
@@ -137,15 +210,48 @@ body {
 
 @keyframes pulse-subtle {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); box-shadow: 0 0 8px rgba(255, 255, 255, 0.8); }
+  50% { transform: scale(1.12); box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.75); }
+}
+
+/* Панели и карточки */
+.deck-card-view {
+  background: linear-gradient(160deg, #fffdf5, #ffffff);
+  border-color: #fde68a;
+  box-shadow: inset 0 0 0 1px rgba(253, 230, 138, 0.6);
 }
 
 /* Print styles for Player Dossier */
 @media print {
+  @page { margin: 12mm; }
+
   body {
-    background: white;
-    color: black;
+    background: white !important;
+    color: black !important;
   }
+
+  body.dossier-open > *:not(#modalDossier) {
+    display: none !important;
+  }
+
+  body.dossier-open #modalDossier {
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    padding: 0 !important;
+    background: white !important;
+    backdrop-filter: none !important;
+  }
+
+  #modalDossier > div {
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
   .no-print {
     display: none !important;
   }
@@ -156,4 +262,11 @@ body {
     box-shadow: none !important;
     border: 1px solid #000 !important;
   }
+  #dossierPrintArea {
+    display: block !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  #dossierPrintArea table { page-break-inside: auto; }
+  #dossierPrintArea tr { page-break-inside: avoid; }
 }
