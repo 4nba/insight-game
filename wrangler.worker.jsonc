@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "insight-game",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-22",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api/*"
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "insight-game-sessions",
+      "database_id": "c12a0580-6fe9-4b7f-b49f-4b0f8d3e39fe",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

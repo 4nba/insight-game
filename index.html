@@ -193,6 +193,11 @@ body.focus-open {
 #playersListContainer > div { flex-wrap: wrap; }
 .group-number { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; color: white; font-weight: bold; font-size: 12px; text-shadow: 0 1px 2px #000; }
 .group-bulk { font-size: 12px; }
+.cloud-sessions-list { display: grid; gap: 6px; max-height: 220px; overflow: auto; }
+.cloud-session { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px; background: white; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 12px; }
+.cloud-session > div { min-width: 0; overflow-wrap: anywhere; }
+.cloud-session small { display: block; color: #64748b; font-size: 10px; }
+.cloud-session button { padding: 7px 10px; background: #e0e7ff; border-radius: 6px; flex-shrink: 0; }
 .group-bulk summary { cursor: pointer; font-weight: 600; }
 .group-bulk label { display: block; margin-top: 8px; }
 .group-bulk textarea { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; }
@@ -671,22 +676,34 @@ body.focus-open {
       <div class="p-4 rounded-xl bg-gradient-to-br from-indigo-100 to-white border border-indigo-300 flex flex-col gap-3 shadow-lg">
         <div class="flex items-center justify-between">
           <span class="font-extrabold text-sm text-indigo-700 flex items-center gap-1.5">
-            <span>⚡</span> Realtime Облако (Cloudflare KV)
+            <span>☁️</span> Сессии в облаке
           </span>
           <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-300 font-bold">
-            100% Бесплатно навсегда
+            Автосохранение
           </span>
         </div>
         <p class="text-[11px] text-slate-600 leading-relaxed">
-          Любые ведущие с любых компьютеров и телефонов подключаются к одной комнате. При каждом ходе данные в реальном времени сохраняются в облаке и обновляются на всех экранах!
+          Сохраните игру под названием: все участники, ходы и заметки будут храниться в Cloudflare. Страницу можно закрыть и позже продолжить с любого устройства. Сохранение работает после подключения базы.
         </p>
 
+        <label for="inputSessionTitle" class="text-xs font-semibold">Название сессии</label>
+        <input id="inputSessionTitle" maxlength="120" placeholder="Например, Группа · 22 октября" class="px-3 py-2 rounded-lg bg-white border border-indigo-300 text-xs">
+        <div class="flex flex-wrap gap-2">
+          <button id="btnSaveNewSession" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-bold">Сохранить как новую сессию</button>
+          <button id="btnSaveCloudNow" class="px-3 py-2 rounded-lg bg-white border border-indigo-300 text-xs">Сохранить сейчас</button>
+        </div>
+        <p id="sessionSaveStatus" role="status" class="text-xs text-slate-600">Пока только локальное сохранение.</p>
+        <div class="flex items-center justify-between"><strong class="text-xs">Сохранённые игры</strong><button id="btnRefreshSessions" class="text-xs text-indigo-700">Обновить список</button></div>
+        <div id="cloudSessionsList" class="cloud-sessions-list" aria-live="polite"></div>
+
+        <details><summary class="text-xs cursor-pointer">Подключить по коду комнаты</summary>
         <div class="flex flex-col sm:flex-row gap-2 pt-1">
           <input type="text" id="inputCloudRoomName" placeholder="Имя комнаты (например, potok-1)..." class="flex-1 px-3 py-2 rounded-lg bg-amber-50 border border-indigo-300 text-xs text-slate-800 font-mono focus:outline-none focus:border-amber-400">
           <button id="btnConnectCloudRoom" class="px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-xs transition shadow flex items-center justify-center gap-1.5">
             <span>🔗</span> Подключить комнату
           </button>
         </div>
+        </details>
 
         <div class="flex flex-wrap items-center gap-2 pt-1">
           <button id="btnCopyCloudShareUrl" class="py-1.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-[11px] font-semibold transition flex items-center gap-1">
@@ -3083,6 +3100,7 @@ const LEVEL_INFO = [
 const LEVELS = [1, 2, 3, 4, 5, 6];
 const DEFAULT_REQUEST = 'Что мне мешает проявиться и выйти на новый доход?';
 const SAVE_KEY = 'insight_game_save_v1';
+const PENDING_KEY = SAVE_KEY + '_pending_room';
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -3243,6 +3261,9 @@ class InsightGame {
     this.pollingTimer = null;
     this.cloudSaveTimer = null;
     this.cloudDirty = false;
+    this.cloudCanWrite = false;
+    this.cloudSavePromise = null;
+    this.cloudSavedAt = null;
     this.suppressCloudSave = false;
     this.onStateChangedCallbacks = [];
 
@@ -3259,6 +3280,7 @@ class InsightGame {
       filterLevel: 'all',
       log: [],
       cloudRoomId: null,
+      sessionTitle: '',
       lastUpdated: Date.now(),
       gameStarted: false,
       deckRemaining: {},
@@ -3268,17 +3290,22 @@ class InsightGame {
 
   async init() {
     const urlParams = new URLSearchParams(window.location.search);
-    const roomParam = urlParams.get('room');
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch {}
+    const hasSnapshot = /^#sessionz?=/.test(window.location.hash);
+    const roomParam = hasSnapshot ? null : (urlParams.get('room') || saved?.cloudRoomId);
     let cloudFound = false;
 
     if (roomParam) {
-      this.state.cloudRoomId = roomParam.trim();
+      if (saved?.cloudRoomId === roomParam) this.state = this.normalizeState(saved);
+      this.state.cloudRoomId = this.sanitizeRoomId(roomParam);
       this.isCloudSyncActive = true;
+      try { this.cloudDirty = localStorage.getItem(PENDING_KEY) === this.state.cloudRoomId; } catch {}
       this.suppressCloudSave = true;
-      const result = await this.fetchFromCloud({ force: true, apply: true });
+      const result = await this.fetchFromCloud({ force: true, apply: !this.cloudDirty });
       cloudFound = Boolean(result?.found);
       this.suppressCloudSave = false;
-      if (cloudFound) this.startPolling();
+      this.startPolling();
     } else {
       const hashImported = await this.importSessionFromHash();
       if (!hashImported) this.loadState();
@@ -3291,9 +3318,9 @@ class InsightGame {
     }
 
     this.state.selectedCellId = this.getActivePlayer()?.currentCell ?? 98;
-    this.saveState({ cloud: Boolean(roomParam && !cloudFound && this.cloudReachable === true), notify: false });
+    this.saveState({ cloud: false, notify: false, touch: false });
 
-    if (roomParam && !cloudFound && this.cloudReachable === true) this.queueCloudSave(0);
+    if (roomParam && ((!cloudFound && this.cloudReachable === true) || this.cloudDirty)) this.queueCloudSave(0);
     this.notifyStateChange();
   }
 
@@ -3328,8 +3355,8 @@ class InsightGame {
   }
 
   saveState(options = {}) {
-    const { cloud = true, notify = true } = options;
-    this.state.lastUpdated = Date.now();
+    const { cloud = true, notify = true, touch = true } = options;
+    if (touch) this.state.lastUpdated = Math.max(Date.now(), Number(this.state.lastUpdated || 0) + 1);
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(this.state));
     } catch (e) {
@@ -4094,6 +4121,8 @@ class InsightGame {
   queueCloudSave(delay = 700) {
     if (!this.state.cloudRoomId || !this.isCloudSyncActive || this.suppressCloudSave) return;
     this.cloudDirty = true;
+    this.onCloudStatusChange?.();
+    try { localStorage.setItem(PENDING_KEY, this.state.cloudRoomId); } catch {}
     if (this.cloudSaveTimer) clearTimeout(this.cloudSaveTimer);
     this.cloudSaveTimer = setTimeout(() => {
       this.cloudSaveTimer = null;
@@ -4102,44 +4131,64 @@ class InsightGame {
   }
 
   async saveToCloud() {
-    if (!this.state.cloudRoomId || !this.isCloudSyncActive || this.suppressCloudSave) return;
+    if (!this.state.cloudRoomId || !this.isCloudSyncActive || this.suppressCloudSave || !this.cloudCanWrite) return false;
+    if (this.cloudSavePromise) return this.cloudSavePromise;
     const roomId = this.state.cloudRoomId;
     const body = JSON.stringify(this.state);
+    this.cloudSavePromise = this.postCloudSnapshot(roomId, body).finally(() => {
+      this.cloudSavePromise = null;
+    });
+    return this.cloudSavePromise;
+  }
+
+  async postCloudSnapshot(roomId, body) {
     try {
       const resp = await fetch(`/api/room/${encodeURIComponent(roomId)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body
+        body,
+        signal: AbortSignal.timeout(10000)
       });
       const result = resp.ok ? await resp.json() : null;
-      if (this.state.cloudRoomId !== roomId || !this.isCloudSyncActive) return;
+      if (this.state.cloudRoomId !== roomId || !this.isCloudSyncActive) return false;
       if (resp.ok && result?.success === true) {
-        if (JSON.stringify(this.state) === body) this.cloudDirty = false;
+        if (JSON.stringify(this.state) === body) {
+          this.cloudDirty = false;
+          try { localStorage.removeItem(PENDING_KEY); } catch {}
+        }
+        this.cloudSavedAt = Date.now();
         this.cloudReachable = true;
         this.cloudError = '';
         this.notifyStateChange();
+        return true;
       } else {
         this.cloudReachable = false;
         this.cloudError = result?.error || `HTTP ${resp.status}`;
         this.notifyStateChange();
       }
     } catch (e) {
+      if (this.state.cloudRoomId !== roomId) return false;
       this.cloudReachable = false;
       this.cloudError = 'сеть недоступна';
       this.notifyStateChange();
       console.warn('Облачный бекенд недоступен (локальный режим или оффлайн):', e);
     }
+    return false;
   }
 
   async fetchFromCloud(options = {}) {
     const { force = false, apply = true } = options;
     if (!this.state.cloudRoomId) return { found: false, data: null };
+    const requestedRoom = this.state.cloudRoomId;
     try {
-      const resp = await fetch(`/api/room/${encodeURIComponent(this.state.cloudRoomId)}`);
+      const resp = await fetch(`/api/room/${encodeURIComponent(requestedRoom)}`, { signal: AbortSignal.timeout(10000) });
+      if (this.state.cloudRoomId !== requestedRoom || !this.isCloudSyncActive) return { found: false, data: null };
       const contentType = resp.headers.get('content-type') || '';
       if (!resp.ok) {
         if (resp.status === 404 && contentType.includes('application/json')) {
-          this.cloudReachable = true;
+          const result = await resp.json();
+          this.cloudReachable = result.notFound === true;
+          this.cloudCanWrite = result.notFound === true;
           this.cloudError = '';
         } else {
           this.cloudReachable = false;
@@ -4156,6 +4205,7 @@ class InsightGame {
       }
 
       this.cloudReachable = true;
+      this.cloudCanWrite = true;
       this.cloudError = '';
       const shouldApply = force || (!this.cloudDirty && Number(cloudState.lastUpdated) > Number(this.state.lastUpdated || 0));
       if (apply && shouldApply) {
@@ -4167,6 +4217,7 @@ class InsightGame {
       }
       return { found: true, data: cloudState, applied: Boolean(apply && shouldApply) };
     } catch (e) {
+      if (this.state.cloudRoomId !== requestedRoom) return { found: false, data: null };
       this.cloudReachable = false;
       this.cloudError = 'сеть недоступна';
       return { found: false, data: null };
@@ -4178,11 +4229,28 @@ class InsightGame {
     const cleanRoom = this.sanitizeRoomId(roomId);
     if (!cleanRoom) return { ok: false, found: false };
 
+    if (!(await this.flushCloudSave())) return { ok: false, found: false, unsaved: true };
+    if (this.cloudSaveTimer) clearTimeout(this.cloudSaveTimer);
+    const previous = {
+      state: deepClone(this.state), active: this.isCloudSyncActive,
+      canWrite: this.cloudCanWrite, reachable: this.cloudReachable
+    };
+    this.cloudCanWrite = false;
+    this.cloudDirty = false;
+
     this.state.cloudRoomId = cleanRoom;
     this.isCloudSyncActive = true;
     this.suppressCloudSave = true;
     const result = await this.fetchFromCloud({ force: join, apply: join });
     this.suppressCloudSave = false;
+    if (this.cloudReachable === false || (join && !result.found)) {
+      this.state = previous.state;
+      this.isCloudSyncActive = previous.active;
+      this.cloudCanWrite = previous.canWrite;
+      this.cloudReachable = previous.active ? previous.reachable : false;
+      this.saveState({ cloud: false, touch: false });
+      return { ok: false, found: false, reachable: false };
+    }
 
     if (join) {
       if (!result.found && this.cloudReachable === true) this.queueCloudSave(0);
@@ -4201,15 +4269,22 @@ class InsightGame {
     }
 
     this.startPolling();
-    this.saveState({ cloud: false });
+    this.saveState({ cloud: false, touch: false });
     return { ok: true, found: Boolean(result.found), reachable: this.cloudReachable !== false };
   }
 
   startPolling() {
     if (this.pollingTimer) clearInterval(this.pollingTimer);
-    this.pollingTimer = setInterval(() => {
-      if (document.hidden) return;
-      this.fetchFromCloud();
+    this.pollingTimer = setInterval(async () => {
+      if (document.hidden || this.suppressCloudSave) return;
+      // Retry pending local changes before accepting a remote snapshot.
+      if (this.cloudDirty) {
+        if (!this.cloudCanWrite) await this.fetchFromCloud({ apply: false });
+        await this.saveToCloud();
+      } else {
+        await this.fetchFromCloud();
+      }
+      this.notifyStateChange();
     }, 4000);
   }
 
@@ -4217,6 +4292,9 @@ class InsightGame {
     this.isCloudSyncActive = false;
     this.state.cloudRoomId = null;
     this.cloudDirty = false;
+    this.cloudCanWrite = false;
+    this.cloudSavedAt = null;
+    try { localStorage.removeItem(PENDING_KEY); } catch {}
     this.cloudReachable = null;
     this.cloudError = '';
     if (this.pollingTimer) {
@@ -4235,6 +4313,49 @@ class InsightGame {
     if (!this.state.cloudRoomId) return window.location.href;
     const base = window.location.origin + window.location.pathname;
     return `${base}?room=${encodeURIComponent(this.state.cloudRoomId)}`;
+  }
+
+  async flushCloudSave() {
+    if (!this.isCloudSyncActive || !this.cloudDirty) return true;
+    if (this.cloudSaveTimer) clearTimeout(this.cloudSaveTimer);
+    this.cloudSaveTimer = null;
+    if (this.cloudSavePromise) await this.cloudSavePromise;
+    if (!this.cloudDirty) return true;
+    return Boolean(await this.saveToCloud()) && !this.cloudDirty;
+  }
+
+  async createCloudSession(title) {
+    if (!(await this.flushCloudSave())) return { ok: false, message: 'Текущая сессия ещё не сохранена. Дождитесь сети или скачайте JSON.' };
+    const id = crypto.randomUUID();
+    const snapshot = deepClone(this.state);
+    snapshot.cloudRoomId = id;
+    snapshot.sessionTitle = String(title || 'Игра ' + new Date().toLocaleDateString('ru-RU')).trim().slice(0, 120);
+    snapshot.lastUpdated = Date.now();
+    try {
+      const response = await fetch(`/api/room/${id}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'If-None-Match': '*' },
+        body: JSON.stringify(snapshot), signal: AbortSignal.timeout(10000)
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || result.error || 'Ошибка сохранения');
+      this.disconnectCloudRoom();
+      this.state = this.normalizeState(snapshot);
+      this.undoStack = [];
+      this.isCloudSyncActive = true;
+      this.cloudCanWrite = true;
+      this.cloudReachable = true;
+      this.cloudSavedAt = Date.now();
+      this.saveState({ cloud: false, touch: false });
+      this.startPolling();
+      return { ok: true, id };
+    } catch (error) { return { ok: false, message: error.message }; }
+  }
+
+  async listCloudSessions() {
+    const response = await fetch('/api/sessions', { signal: AbortSignal.timeout(10000) });
+    const result = await response.json();
+    if (!response.ok || !Array.isArray(result.sessions)) throw new Error(result.message || 'Список сессий недоступен. Проверьте подключение базы D1.');
+    return result.sessions;
   }
 
   // --- SESSION LINKS / CODES ---
@@ -4494,6 +4615,10 @@ async function initUI() {
   renderBoard();
   updateUI();
   setupEventListeners();
+  game.onCloudStatusChange = renderCloudStatus;
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) game.flushCloudSave();
+  });
 
   // Listen to external/cloud updates
   game.onStateChange(() => {
@@ -4574,23 +4699,7 @@ function updateUI() {
   turnPlayerName.textContent = player.name;
   dossierPlayerName.textContent = player.name;
 
-  // Cloud status badge
-  if (cloudStatusBadge) {
-    if (game.state.cloudRoomId && game.isCloudSyncActive) {
-      const reachable = game.cloudReachable !== false;
-      cloudStatusBadge.className = reachable
-        ? 'text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 flex items-center gap-1 font-mono'
-        : 'text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1 font-mono';
-      cloudStatusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${reachable ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}"></span> ☁️ ${escapeHtml(game.state.cloudRoomId)}${reachable ? '' : ' · офлайн'}`;
-      cloudStatusBadge.title = reachable
-        ? 'Облачная синхронизация активна'
-        : `Облако недоступно${game.cloudError ? `: ${game.cloudError}` : ''}. Данные сохраняются локально.`;
-    } else {
-      cloudStatusBadge.className = 'text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 flex items-center gap-1 font-mono';
-      cloudStatusBadge.innerHTML = `<span>⚪</span> Локально`;
-      cloudStatusBadge.title = 'Данные сохраняются локально в браузере';
-    }
-  }
+  renderCloudStatus();
 
   const status = game.getStatus(player);
   const isDone = status === 'finished' || status === 'exited';
@@ -4701,6 +4810,33 @@ function updateUI() {
   renderPlayerTokens();
   renderSelectedCard();
   renderMovesLog();
+}
+
+function renderCloudStatus() {
+  // Cloud status badge
+  if (cloudStatusBadge) {
+    if (game.state.cloudRoomId && game.isCloudSyncActive) {
+      const reachable = game.cloudReachable === true;
+      cloudStatusBadge.className = reachable
+        ? 'text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 flex items-center gap-1 font-mono'
+        : 'text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1 font-mono';
+      cloudStatusBadge.textContent = `☁️ ${game.state.sessionTitle || game.state.cloudRoomId} · ${!reachable ? 'офлайн' : game.cloudDirty ? 'сохранение…' : 'сохранено'}`;
+      cloudStatusBadge.title = reachable
+        ? 'Облачная синхронизация активна'
+        : `Облако недоступно${game.cloudError ? `: ${game.cloudError}` : ''}. Данные сохраняются локально.`;
+    } else {
+      cloudStatusBadge.className = 'text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 flex items-center gap-1 font-mono';
+      cloudStatusBadge.innerHTML = `<span>⚪</span> Локально`;
+      cloudStatusBadge.title = 'Данные сохраняются локально в браузере';
+    }
+  }
+  const saveStatus = document.getElementById('sessionSaveStatus');
+  if (saveStatus) saveStatus.textContent = !game.isCloudSyncActive
+    ? 'Пока только локальное сохранение.'
+    : game.cloudReachable === false ? 'Облако недоступно. Изменения остаются в этом браузере; повторим сохранение после восстановления связи.'
+      : game.cloudDirty ? 'Есть изменения, ожидающие сохранения…'
+        : `Сессия подключена${game.cloudSavedAt ? ' · сохранено в ' + new Date(game.cloudSavedAt).toLocaleTimeString('ru-RU') : ''}.`;
+
 }
 
 function renderGroupRoster() {
@@ -5247,6 +5383,29 @@ function setupEventListeners() {
   });
 
   // Sync Modal Handlers
+  document.getElementById('btnSaveNewSession').addEventListener('click', async event => {
+    event.currentTarget.disabled = true;
+    const result = await game.createCloudSession(document.getElementById('inputSessionTitle').value);
+    document.getElementById('btnSaveNewSession').disabled = false;
+    updateUI();
+    showToast(result.ok ? 'Игра сохранена в облаке. Следующие изменения сохраняются автоматически.' : result.message, result.ok ? '☁️' : '⚠️');
+    if (result.ok) {
+      rememberCloudUrl();
+      refreshCloudSessions();
+    }
+  });
+  document.getElementById('btnSaveCloudNow').addEventListener('click', async () => {
+    if (!game.isCloudSyncActive) { showToast('Сначала сохраните игру как новую сессию', 'ℹ️'); return; }
+    const title = document.getElementById('inputSessionTitle').value.trim();
+    if (title) game.state.sessionTitle = title.slice(0, 120);
+    game.saveState();
+    const saved = await game.flushCloudSave();
+    updateUI();
+    showToast(saved ? 'Сессия сохранена в облаке' : 'Не удалось сохранить в облаке. Локальная копия сохранена.', saved ? '☁️' : '⚠️');
+    if (saved) refreshCloudSessions();
+  });
+  document.getElementById('btnRefreshSessions').addEventListener('click', refreshCloudSessions);
+
   document.getElementById('btnConnectCloudRoom').addEventListener('click', async () => {
     const input = document.getElementById('inputCloudRoomName');
     const room = input.value.trim();
@@ -5254,13 +5413,14 @@ function setupEventListeners() {
       const result = await game.connectToCloudRoom(room);
       updateUI();
       if (result.ok) {
+        rememberCloudUrl();
         if (result.reachable === false) {
           showToast(`Комната «${room}» сохранена локально: облачный API недоступен`, '⚠️');
         } else {
           showToast(result.found ? `Комната «${room}» подключена` : `Комната «${room}» создана`, '☁️');
         }
       } else {
-        showToast('Укажите название комнаты (латиница, цифры, - и _)', '⚠️');
+        showToast(result.unsaved ? 'Сначала сохраните текущую игру в облаке или скачайте JSON.' : result.reachable === false ? 'Сервер сохранений недоступен. Текущая игра остаётся локально.' : 'Укажите название комнаты (латиница, цифры, - и _)', '⚠️');
       }
     }
   });
@@ -5272,6 +5432,7 @@ function setupEventListeners() {
 
   document.getElementById('btnDisconnectCloud').addEventListener('click', () => {
     game.disconnectCloudRoom();
+    clearCloudUrl();
     updateUI();
     showToast('Переключено в локальный режим', '⚪');
   });
@@ -5306,8 +5467,8 @@ function setupEventListeners() {
         try {
           const parsed = JSON.parse(event.target.result);
           if (parsed.players && Array.isArray(parsed.players)) {
-            game.state = game.normalizeState({ ...parsed, cloudRoomId: game.state.cloudRoomId });
-            game.saveState();
+            if (!game.parseImportedState(parsed)) throw new Error('Некорректная сессия или слишком много игроков');
+            clearCloudUrl();
             updateUI();
             modalSync.classList.add('hidden');
             showToast('Сессия успешно загружена из файла!', '📂');
@@ -5893,6 +6054,55 @@ function openSyncModal() {
     inputRoom.value = game.state.cloudRoomId;
   }
   modalSync.classList.remove('hidden');
+  document.getElementById('inputSessionTitle').value = game.state.sessionTitle || '';
+  refreshCloudSessions();
+}
+
+function rememberCloudUrl() {
+  if (location.protocol === 'file:') return;
+  const url = new URL(location.href);
+  url.searchParams.set('room', game.state.cloudRoomId);
+  url.hash = '';
+  history.replaceState(null, '', url);
+}
+
+function clearCloudUrl() {
+  if (location.protocol === 'file:') return;
+  const url = new URL(location.href);
+  url.searchParams.delete('room');
+  url.hash = '';
+  history.replaceState(null, '', url);
+}
+
+async function refreshCloudSessions() {
+  const list = document.getElementById('cloudSessionsList');
+  list.textContent = 'Загрузка…';
+  try {
+    const sessions = await game.listCloudSessions();
+    list.innerHTML = '';
+    if (!sessions.length) list.textContent = 'Сохранённых игр пока нет. Сохраните текущую игру кнопкой выше.';
+    sessions.forEach(session => {
+      const row = document.createElement('div');
+      row.className = 'cloud-session';
+      row.innerHTML = `<div><strong>${escapeHtml(session.title)}</strong><small>Участников: ${escapeHtml(session.playerCount)} · ${escapeHtml(new Date(session.updatedAt).toLocaleString('ru-RU'))}</small></div>`;
+      const open = document.createElement('button');
+      open.textContent = 'Продолжить';
+      open.addEventListener('click', async () => {
+        if (!(await game.flushCloudSave())) { showToast('Сначала сохраните изменения текущей игры или скачайте JSON.', '⚠️'); return; }
+        if (!game.isCloudSyncActive && !confirm('Открыть сохранённую игру? Текущую локальную игру при необходимости сначала сохраните как новую сессию или скачайте JSON.')) return;
+        const result = await game.connectToCloudRoom(session.id, { join: true });
+        if (result.reachable === false || !result.found) { showToast('Сессия не загрузилась. Проверьте связь.', '⚠️'); return; }
+        game.undoStack = [];
+        rememberCloudUrl();
+        document.getElementById('inputSessionTitle').value = game.state.sessionTitle || '';
+        modalSync.classList.add('hidden');
+        updateUI();
+        showToast('Сессия загружена', '☁️');
+      });
+      row.appendChild(open);
+      list.appendChild(row);
+    });
+  } catch (error) { list.textContent = error.message.includes('JSON') ? 'Список недоступен: сервер сохранений не настроен.' : error.message; }
 }
 
 async function copyText(text, successMessage = 'Скопировано!') {

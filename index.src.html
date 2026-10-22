@@ -395,22 +395,34 @@
       <div class="p-4 rounded-xl bg-gradient-to-br from-indigo-100 to-white border border-indigo-300 flex flex-col gap-3 shadow-lg">
         <div class="flex items-center justify-between">
           <span class="font-extrabold text-sm text-indigo-700 flex items-center gap-1.5">
-            <span>⚡</span> Realtime Облако (Cloudflare KV)
+            <span>☁️</span> Сессии в облаке
           </span>
           <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-300 font-bold">
-            100% Бесплатно навсегда
+            Автосохранение
           </span>
         </div>
         <p class="text-[11px] text-slate-600 leading-relaxed">
-          Любые ведущие с любых компьютеров и телефонов подключаются к одной комнате. При каждом ходе данные в реальном времени сохраняются в облаке и обновляются на всех экранах!
+          Сохраните игру под названием: все участники, ходы и заметки будут храниться в Cloudflare. Страницу можно закрыть и позже продолжить с любого устройства. Сохранение работает после подключения базы.
         </p>
 
+        <label for="inputSessionTitle" class="text-xs font-semibold">Название сессии</label>
+        <input id="inputSessionTitle" maxlength="120" placeholder="Например, Группа · 22 октября" class="px-3 py-2 rounded-lg bg-white border border-indigo-300 text-xs">
+        <div class="flex flex-wrap gap-2">
+          <button id="btnSaveNewSession" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-bold">Сохранить как новую сессию</button>
+          <button id="btnSaveCloudNow" class="px-3 py-2 rounded-lg bg-white border border-indigo-300 text-xs">Сохранить сейчас</button>
+        </div>
+        <p id="sessionSaveStatus" role="status" class="text-xs text-slate-600">Пока только локальное сохранение.</p>
+        <div class="flex items-center justify-between"><strong class="text-xs">Сохранённые игры</strong><button id="btnRefreshSessions" class="text-xs text-indigo-700">Обновить список</button></div>
+        <div id="cloudSessionsList" class="cloud-sessions-list" aria-live="polite"></div>
+
+        <details><summary class="text-xs cursor-pointer">Подключить по коду комнаты</summary>
         <div class="flex flex-col sm:flex-row gap-2 pt-1">
           <input type="text" id="inputCloudRoomName" placeholder="Имя комнаты (например, potok-1)..." class="flex-1 px-3 py-2 rounded-lg bg-amber-50 border border-indigo-300 text-xs text-slate-800 font-mono focus:outline-none focus:border-amber-400">
           <button id="btnConnectCloudRoom" class="px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-xs transition shadow flex items-center justify-center gap-1.5">
             <span>🔗</span> Подключить комнату
           </button>
         </div>
+        </details>
 
         <div class="flex flex-wrap items-center gap-2 pt-1">
           <button id="btnCopyCloudShareUrl" class="py-1.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-[11px] font-semibold transition flex items-center gap-1">

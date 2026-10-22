@@ -183,6 +183,11 @@ body.focus-open {
 #playersListContainer > div { flex-wrap: wrap; }
 .group-number { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; color: white; font-weight: bold; font-size: 12px; text-shadow: 0 1px 2px #000; }
 .group-bulk { font-size: 12px; }
+.cloud-sessions-list { display: grid; gap: 6px; max-height: 220px; overflow: auto; }
+.cloud-session { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px; background: white; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 12px; }
+.cloud-session > div { min-width: 0; overflow-wrap: anywhere; }
+.cloud-session small { display: block; color: #64748b; font-size: 10px; }
+.cloud-session button { padding: 7px 10px; background: #e0e7ff; border-radius: 6px; flex-shrink: 0; }
 .group-bulk summary { cursor: pointer; font-weight: 600; }
 .group-bulk label { display: block; margin-top: 8px; }
 .group-bulk textarea { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; }

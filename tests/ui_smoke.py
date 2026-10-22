@@ -256,6 +256,7 @@ with sync_playwright() as p:
     # Cloud without a backend must be shown as offline, not as working sync
     page.locator("#btnSyncModal").click()
     page.wait_for_timeout(120)
+    page.locator('#modalSync details summary').click()
     page.locator("#inputCloudRoomName").fill("offline-test")
     page.locator("#btnConnectCloudRoom").click()
     page.wait_for_timeout(1200)
@@ -264,8 +265,8 @@ with sync_playwright() as p:
         "без облачного API комната помечается как офлайн",
     )
     check(
-        "офлайн" in page.locator("#cloudStatusBadge").text_content(),
-        "бейдж облака показывает офлайн",
+        "Локально" in page.locator("#cloudStatusBadge").text_content(),
+        "неудачное подключение сохраняет локальный режим",
     )
     page.locator("#btnDisconnectCloud").click()
     page.wait_for_timeout(120)

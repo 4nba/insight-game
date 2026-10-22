@@ -84,7 +84,7 @@ export async function onRequestPost(context) {
       return jsonResponse({ error: 'INVALID_STATE', message: 'В состоянии игры нет массива players.' }, 400);
     }
 
-    await kv.put(`room:${roomId}`, body, { expirationTtl: 60 * 60 * 24 * 30 });
+    await kv.put(`room:${roomId}`, body);
 
     return jsonResponse({
       success: true,

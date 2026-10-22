@@ -1,0 +1,15 @@
+{
+  "name": "insight-game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "configure:db": "node scripts/set-database.mjs",
+    "dev": "wrangler dev --config wrangler.worker.jsonc",
+    "deploy": "wrangler deploy --config wrangler.worker.jsonc",
+    "db:local": "wrangler d1 migrations apply insight-game-sessions --local --config wrangler.worker.jsonc",
+    "db:remote": "wrangler d1 migrations apply insight-game-sessions --remote --config wrangler.worker.jsonc"
+  },
+  "devDependencies": {
+    "wrangler": "^4.152.0"
+  }
+}
